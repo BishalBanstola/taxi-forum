@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  taxiforum-app:
+    image: taxiforum-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://taxiforum-db:3306/taxiforum_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: taxiforum-kafka:9092
+    depends_on:
+      - taxiforum-db
+      - taxiforum-kafka
+
+  taxiforum-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: taxiforum_db
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  taxiforum-kafka:
+    image: confluentinc/cp-kafka:7.2.2
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: taxiforum-zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://taxiforum-kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - taxiforum-zookeeper
+    ports:
+      - "9092:9092"
+
+  taxiforum-zookeeper:
+    image: confluentinc/cp-zookeeper:7.2.2
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+volumes:
+  db_data:
